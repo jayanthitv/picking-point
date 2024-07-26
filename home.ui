@@ -646,7 +646,7 @@ QPushButton:hover{
                    <string/>
                   </property>
                   <property name="icon">
-                   <iconset resource="ui_resources.qrc">
+                   <iconset>
                     <normaloff>:/all/img/begin.png</normaloff>
                     <normalon>:/all/img/pause.png</normalon>:/all/img/begin.png</iconset>
                   </property>
@@ -868,7 +868,7 @@ padding-left:12px;
 font: 700 italic 16pt &quot;Segoe UI&quot;;</string>
                            </property>
                            <property name="text">
-                            <string>Mango</string>
+                            <string>Mango：Stem</string>
                            </property>
                            <property name="alignment">
                             <set>Qt::AlignCenter</set>
@@ -1062,7 +1062,7 @@ padding-left:12px;
 font: 700 italic 16pt &quot;Segoe UI&quot;;</string>
                            </property>
                            <property name="text">
-                            <string>Stem</string>
+                            <string>FPS</string>
                            </property>
                            <property name="alignment">
                             <set>Qt::AlignCenter</set>
@@ -1259,7 +1259,7 @@ font: 700 italic 16pt &quot;Segoe UI&quot;;</string>
                             <number>-1</number>
                            </property>
                            <property name="text">
-                            <string>Fps</string>
+                            <string>Detection</string>
                            </property>
                            <property name="alignment">
                             <set>Qt::AlignCenter</set>
@@ -1318,40 +1318,8 @@ font: 700 italic 16pt &quot;Segoe UI&quot;;</string>
                          <property name="bottomMargin">
                           <number>6</number>
                          </property>
-                         <item alignment="Qt::AlignTop">
-                          <widget class="QLabel" name="fps_label">
-                           <property name="minimumSize">
-                            <size>
-                             <width>0</width>
-                             <height>30</height>
-                            </size>
-                           </property>
-                           <property name="maximumSize">
-                            <size>
-                             <width>16777215</width>
-                             <height>30</height>
-                            </size>
-                           </property>
-                           <property name="font">
-                            <font>
-                             <family>Microsoft YaHei UI</family>
-                             <pointsize>17</pointsize>
-                             <italic>false</italic>
-                             <bold>false</bold>
-                             <underline>false</underline>
-                            </font>
-                           </property>
-                           <property name="styleSheet">
-                            <string notr="true">color: rgb(255, 255, 255);
-font: 17pt &quot;Microsoft YaHei UI&quot;;</string>
-                           </property>
-                           <property name="text">
-                            <string/>
-                           </property>
-                           <property name="alignment">
-                            <set>Qt::AlignCenter</set>
-                           </property>
-                          </widget>
+                         <item>
+                          <widget class="QComboBox" name="comboBox_detection"/>
                          </item>
                         </layout>
                        </widget>
@@ -1459,7 +1427,7 @@ font: 700 italic 16pt &quot;Segoe UI&quot;;</string>
                             <number>-1</number>
                            </property>
                            <property name="text">
-                            <string>Use Model</string>
+                            <string>Segmentation</string>
                            </property>
                            <property name="alignment">
                             <set>Qt::AlignCenter</set>
@@ -1519,7 +1487,7 @@ font: 700 italic 16pt &quot;Segoe UI&quot;;</string>
                           <number>6</number>
                          </property>
                          <item>
-                          <widget class="QComboBox" name="comboBox"/>
+                          <widget class="QComboBox" name="comboBoxsegmentation"/>
                          </item>
                         </layout>
                        </widget>

@@ -8,7 +8,7 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,QThread,
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt)
 from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
@@ -20,13 +20,15 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBo
     QMainWindow, QPushButton, QSizePolicy, QSlider,
     QSpacerItem, QSpinBox, QVBoxLayout, QWidget)
 import ui_resources_rc
-from ultralytics import YOLO
-from step2_picking import *
-from hrnet.hrnet import *
-from step1_main import *
 import os
-import pandas as pd
-import subprocess
+import cv2
+import numpy as np
+from skimage.morphology import skeletonize
+from skimage.graph import route_through_array
+from ultralytics import YOLO
+import time
+
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
@@ -81,7 +83,7 @@ class Ui_MainWindow(object):
         self.logo.setSizePolicy(sizePolicy)
         self.logo.setMinimumSize(QSize(50, 50))
         self.logo.setMaximumSize(QSize(50, 50))
-        self.logo.setStyleSheet(u"image: url(:/all/img/logo.png);\n"
+        self.logo.setStyleSheet(u"image: "
 "border:2px solid rgb(255, 255, 255);\n"
 "border-radius:10px")
         self.Author = QLabel(self.TopLogoInfo)
@@ -176,7 +178,6 @@ class Ui_MainWindow(object):
         self.src_file_button.setObjectName(u"src_file_button")
         self.src_file_button.setMinimumSize(QSize(0, 45))
         self.src_file_button.setCursor(QCursor(Qt.PointingHandCursor))
-        self.ImagePath = ''
         self.src_file_button.setStyleSheet(u"QPushButton{\n"
 "background-image: url(:/all/img/file.png);\n"
 "background-repeat: no-repeat;\n"
@@ -581,16 +582,13 @@ class Ui_MainWindow(object):
         self.verticalLayout_12.setSpacing(0)
         self.verticalLayout_12.setObjectName(u"verticalLayout_12")
         self.verticalLayout_12.setContentsMargins(0, 6, 0, 6)
-        self.fps_label = QLabel(self.Fps_bottom)
-        self.fps_label.setObjectName(u"fps_label")
-        self.fps_label.setMinimumSize(QSize(0, 30))
-        self.fps_label.setMaximumSize(QSize(16777215, 30))
-        self.fps_label.setFont(font2)
-        self.fps_label.setStyleSheet(u"color: rgb(255, 255, 255);\n"
-"font: 17pt \"Microsoft YaHei UI\";")
-        self.fps_label.setAlignment(Qt.AlignCenter)
+        self.comboBox_detection = QComboBox(self.Fps_bottom)
+        self.comboBox_detection.setObjectName(u"comboBox_detection")
+        self.update_combo_box1()
+        self.comboBox_detection.currentIndexChanged.connect(self.on_combobox_changed1)
 
-        self.verticalLayout_12.addWidget(self.fps_label, 0, Qt.AlignTop)
+
+        self.verticalLayout_12.addWidget(self.comboBox_detection)
 
 
         self.verticalLayout_11.addWidget(self.Fps_bottom)
@@ -662,17 +660,14 @@ class Ui_MainWindow(object):
         self.verticalLayout_14.setSpacing(0)
         self.verticalLayout_14.setObjectName(u"verticalLayout_14")
         self.verticalLayout_14.setContentsMargins(0, 6, 0, 6)
+        self.comboBoxsegmentation = QComboBox(self.Model_bottom)
+        self.comboBoxsegmentation.setObjectName(u"comboBoxsegmentation")
+        self.update_combo_box2()
+        self.comboBoxsegmentation.currentIndexChanged.connect(self.on_combobox_changed2)
 
-        layout = QVBoxLayout()
-        self.comboBox = QComboBox(self.Model_bottom)
-        self.comboBox.setObjectName(u"comboBox")
 
-        self.update_combo_box()
-        self.comboBox.currentIndexChanged.connect(self.on_combobox_changed)
+        self.verticalLayout_14.addWidget(self.comboBoxsegmentation)
 
-        self.comboBox.currentIndexChanged.connect(self.on_combobox_changed)
-
-        self.verticalLayout_14.addWidget(self.comboBox)
 
         self.verticalLayout_13.addWidget(self.Model_bottom)
 
@@ -1338,13 +1333,12 @@ class Ui_MainWindow(object):
         self.run_button.setText("")
         self.stop_button.setText("")
         self.pre_video.setText("")
-        self.label_5.setText(QCoreApplication.translate("MainWindow", u"Mango", None))
+        self.label_5.setText(QCoreApplication.translate("MainWindow", u"Mango\uff1aStem", None))
         self.Class_num.setText("")
-        self.label_6.setText(QCoreApplication.translate("MainWindow", u"Stem", None))
+        self.label_6.setText(QCoreApplication.translate("MainWindow", u"FPS", None))
         self.Target_num.setText("")
-        self.label_7.setText(QCoreApplication.translate("MainWindow", u"Fps", None))
-        self.fps_label.setText("")
-        self.label_8.setText(QCoreApplication.translate("MainWindow", u"Use Model", None))
+        self.label_7.setText(QCoreApplication.translate("MainWindow", u"Detection", None))
+        self.label_8.setText(QCoreApplication.translate("MainWindow", u"Segmentation", None))
         self.explain_title.setText(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -1364,22 +1358,6 @@ class Ui_MainWindow(object):
         self.save_txt_button.setText(QCoreApplication.translate("MainWindow", u"Save Labels(.txt)", None))
     # retranslateUi
 
-    def update_combo_box(self):
-            self.folder_path = "weight"  # 请替换为实际文件夹路径
-            self.comboBox.clear()
-            for file in os.listdir(self.folder_path):
-                    self.comboBox.addItem(file)
-            self.weight = self.comboBox.currentText()
-
-    def on_combobox_changed(self, index):
-            selected_file = self.comboBox.itemText(index)
-            self.label.setText(f"选中的文件：{selected_file}")
-
-    def on_combobox_changed(self, index):
-            self.weight = self.comboBox.itemText(index)
-
-
-
     def OpenImage(self):
 
             file_dialog = QFileDialog()
@@ -1396,133 +1374,136 @@ class Ui_MainWindow(object):
                             print(image_path)
                             # 显示图片到 QLabel
                             pixmap = QPixmap(image_path)
-                            scaled_pixmap = pixmap.scaled(self.pre_video.width(), self.pre_video.height(), Qt.KeepAspectRatio
-                                                           )
+                            scaled_pixmap = pixmap.scaled(self.pre_video.width(), self.pre_video.height(),
+                                                          Qt.KeepAspectRatio
+                                                          )
                             print(1)
                             self.pre_video.setPixmap(scaled_pixmap)
 
+    def update_combo_box1(self):
+            self.detection_folder_path = "weight/detection"  # 请替换为实际文件夹路径
+            self.comboBox_detection.clear()
+            for file in os.listdir(self.detection_folder_path):
+                    self.comboBox_detection.addItem(file)
+            self.detection_weight = self.comboBox_detection.currentText()
 
+    def on_combobox_changed1(self, index):
+            selected_file = self.comboBox_detection.itemText(index)
+            self.label.setText(f"选中的文件：{selected_file}")
+            self.detection_weight = self.comboBox_detection.itemText(index)
+
+    def update_combo_box2(self):
+            self.segmentation_folder_path = "weight/segmentation"  # 请替换为实际文件夹路径
+            self.comboBoxsegmentation.clear()
+            for file in os.listdir(self.segmentation_folder_path):
+                    self.comboBoxsegmentation.addItem(file)
+            self.segmentation_weight = self.comboBoxsegmentation.currentText()
+
+    def on_combobox_changed2(self, index):
+            selected_file = self.comboBoxsegmentation.itemText(index)
+            self.label.setText(f"选中的文件：{selected_file}")
+            self.segmentation_weight = self.comboBoxsegmentation.itemText(index)
 
     def ProcessImgae(self):
+            self.inputweightdetection = f"{self.detection_folder_path}/{self.detection_weight}"
+            self.inputweightsegmentation = f"{self.segmentation_folder_path}/{self.segmentation_weight}"
+            detect_weights = self.inputweightdetection
+            segment_weights = self.inputweightsegmentation
 
-            print("处理函数")
-            # 函数处理
-
-            import os
-
-            self.inputweight = f"{self.folder_path}/{self.weight}"
-            model = YOLO(self.inputweight)
+            # 加载检测模型
+            detect_model = YOLO(detect_weights)
+            # 加载分割模型
+            segment_model = YOLO(segment_weights)
+            # 读取图像
             source = self.imagePath
-            original_image = cv2.imread(source)
-            image_name = os.path.basename(source)
-            parts = image_name.split(".")
-            file_name = parts[0]
-            model.predict(source=source, name=file_name, **{'save': True, 'save_txt': True, 'save_crop': True})
-
-            data = {}
-            image_size = original_image.shape
-            data['Image'] = image_name
-            data['Image_address'] = source
-            data['Image_output'] = "runs/detect/" + file_name
-            data['Width'] = image_size[1]
-            data['Height'] = image_size[0]
-
-            txt_path = data['Image_output'] + "/labels"
-            stem = read_txt_files(txt_path, image_name)
-
-            # ******************* 2 *****************************************************
-            hrnet = HRnet_Segmentation()
-            mode = "dir_predict"
-            count = False
-            name_classes = ["background", "stem"]
-            dir_origin_path = data['Image_output'] + "/crops/stem"
-            if not os.path.exists(dir_origin_path):
-                    create_directory_if_not_exists(dir_origin_path)
-            dir_save_path = data['Image_output'] + f"/crops/seg"
-
-            if mode == "dir_predict":
-                    import os
-                    from tqdm import tqdm
-
-                    img_names = os.listdir(dir_origin_path)
-                    for img_name in tqdm(img_names):
-                            if img_name.lower().endswith(
-                                    ('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
-                                    image_path = os.path.join(dir_origin_path, img_name)
-                                    image = Image.open(image_path)
-                                    r_image = hrnet.detect_image(image)
-                                    if not os.path.exists(dir_save_path):
-                                            os.makedirs(dir_save_path)
-                                    r_image.save(os.path.join(dir_save_path, img_name))
-            seg_folder_path = dir_save_path  # 替换为实际的文件夹路径
-
-            if not os.path.exists(seg_folder_path):
-                    create_directory_if_not_exists(seg_folder_path)
-
-            points_list = []
-            seg_time=0
-            stem_number=0
-            # 第一步：遍历文件夹下的所有图片
-            for image_name in os.listdir(seg_folder_path):
-                    if image_name.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-
-                            image_path = os.path.join(seg_folder_path, image_name)
-                            # 调用处理图像的函数
-                            target_coords = process_and_apply_morphology(image_path)
-                            seg_image=Image.open(image_path)
-                            tact_time = hrnet.get_FPS(seg_image, 1)
-                            seg_time=seg_time+tact_time
-                            stem_number+=1
-
-                            try:
-                                    x_center, y_center, w, h = stem[image_name]
-
-                                    # 第三步：按公式计算pointx和pointy
-                                    pointx = data['Width'] * x_center - data['Width'] * w / 2 + target_coords[0]
-                                    pointy = data['Height'] * y_center - data['Height'] * h / 2 + target_coords[1]
-                                    # 第四步：将生成的(pointx, pointy)添加到列表中
-                                    points_list.append((pointx, pointy))
-                            except Exception as e:
-                                    continue
+            image = cv2.imread(source)
+            # 记录开始时间
             start_time = time.time()
-            last_image = Image.open(source)
-            draw = ImageDraw.Draw(last_image)
+            # 执行检测
+            results = detect_model(image)
 
-            fruit_image_path=data['Image_output'] + f"/crops/mango"
-            fruit_number=0
-            for fruitimage_name in os.listdir(fruit_image_path):
-                    if fruitimage_name.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-                            fruit_number += 1
+            # 执行检测
+            detect_start_time = time.time()
+            results = detect_model(image)
+            detect_end_time = time.time()
 
-            # 在每个坐标处画一个红点
-            for point in points_list:
-                    x, y = point
-                    # 画一个小圆来表示点，这里的30是圆的直径
-                    draw.ellipse((x - 25, y - 25, x + 25, y + 25), fill='red', outline='red')
+            # 获取stem框
+            stem_boxes = []
+            for result in results:
+                    for box in result.boxes:
+                            if int(box.cls) == 1:  # 检查类别是否为stem（类别1）
+                                    x1, y1, x2, y2 = box.xyxy[0].cpu().int().numpy()
+                                    stem_boxes.append((x1, y1, x2, y2))
 
-            output_folder = "1"
-            os.makedirs(output_folder, exist_ok=True)
-            output_image_file = os.path.join(output_folder, os.path.basename(source))
-            last_image.save(output_image_file)
+            # 遍历每个stem框
+            for box in stem_boxes:
+                    x1, y1, x2, y2 = box
+                    crop_img = image[y1:y2, x1:x2]
+
+                    segment_results = segment_model(crop_img)
+
+                    if isinstance(segment_results, list) and len(segment_results) > 0:
+                            segment_result = segment_results[0]
+                            masks = segment_result.masks
+
+                            if masks is not None and len(masks.data) > 0:
+                                    mask_array = masks.data[0].cpu().numpy()
+                                    mask_image = (mask_array * 255).astype(np.uint8)
+                                    mask_image_resized = cv2.resize(mask_image, (crop_img.shape[1], crop_img.shape[0]))
+
+                                    # 处理mask
+                                    mask_processing_start_time = time.time()
+                                    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask_image_resized,
+                                                                                                    connectivity=8)
+                                    largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
+                                    largest_mask = np.where(labels == largest_label, 255, 0).astype(np.uint8)
+                                    bool_mask = largest_mask.astype(np.bool_)
+                                    skeleton = skeletonize(bool_mask)
+
+                                    # 寻找骨架的最短路径
+                                    pathfinding_start_time = time.time()
+                                    coords = np.column_stack(np.where(skeleton))
+                                    highest_point = coords[np.argmin(coords[:, 0])]
+                                    lowest_point = coords[np.argmax(coords[:, 0])]
+                                    path, cost = route_through_array(1 - skeleton, start=tuple(highest_point),
+                                                                     end=tuple(lowest_point), fully_connected=True)
+                                    shortest_path_skeleton = np.zeros_like(skeleton)
+                                    for coord in path:
+                                            shortest_path_skeleton[coord] = 1
+
+                                    # 标记中间高度点
+                                    middle_height = (highest_point[0] + lowest_point[0]) // 2
+                                    path_coords = np.column_stack(np.where(shortest_path_skeleton > 0))
+                                    closest_point = path_coords[np.argmin(np.abs(path_coords[:, 0] - middle_height))]
+                                    closest_point = (closest_point[1] + x1, closest_point[0] + y1)
+                                    cv2.circle(image, closest_point, 20, (0, 0, 255), -1)
+                    # 记录结束时间并计算耗时（排除保存图片时间）
             end_time = time.time()
-
-            # 计算并打印运行时间
-            execution_time = end_time - start_time
-
-
-
-            self.reslutPath = output_image_file
-
-            pixmap = QPixmap(self.reslutPath)
-            scaled_pixmap = pixmap.scaled(self.pre_video_2.width(), self.pre_video_2.height(), Qt.KeepAspectRatio
-                                          )
-            self.pre_video_2.setPixmap(scaled_pixmap)
-
-            self.total_time = (seg_time + execution_time)*1000
+            self.total_time = (end_time - start_time) * 1000
             predict_time = "{:.2f}ms".format(self.total_time)
-            self.fps_label.setText(predict_time)
-            self.Target_num.setText(str(stem_number))
-            self.Class_num.setText(str(fruit_number))
+            self.Target_num.setText(predict_time)
+            # cv2.imwrite("result", image)
+            # print(f'Marked image saved as result')
+
+            # 提取stem框
+            mango_count = 0
+            stem_count = 0
+
+            for result in results:
+                    for box in result.boxes:
+                            if int(box.cls) == 0:  # 类别为mango
+                                    mango_count += 1
+                            elif int(box.cls) == 1:  # 类别为stem
+                                    stem_count += 1
+            self.Class_num.setText(str(f"{mango_count}:{stem_count}"))
+
+            # 显示图像
+            height, width, channel = image.shape
+            bytes_per_line = 3 * width
+            q_image = QImage(image.data, width, height, bytes_per_line, QImage.Format_RGB888).rgbSwapped()
+            pixmap = QPixmap.fromImage(q_image)
+            scaled_pixmap = pixmap.scaled(self.pre_video_2.width(), self.pre_video_2.height(), Qt.KeepAspectRatio)
+            self.pre_video_2.setPixmap(scaled_pixmap)
 
 
 
