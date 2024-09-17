@@ -4,7 +4,7 @@
 This is a mango picking point prediction system based on YOLOv8n target detection and YOLOv8n-seg instance segmentation, designed for four mango varieties, including Guiqi, Ao Mango, Jinhuang and Tainong. The function of the system is to identify the picking points of mango fruit stalks in the mango images, along with the statistics of the number of fruits, the number of fruit stalks, the prediction time and the selection of model weights. The coordinates of the picking points are used to guide the fruit picking work of the collecting robot, which plays an important role in accurate picking.
 
 # Software Architecture
-Dataset from {https://data.mendeley.com/my-data/}
+Dataset from {https://doi.org/10.17632/hykdyc24xp.2 (original image datasets) and https://doi.org/10.17632/hn866dtzrr.1  (enhanced image datasets)}
 
 
 # Installation Tutorial
